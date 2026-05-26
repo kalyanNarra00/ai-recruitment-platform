@@ -1,0 +1,38 @@
+# Backend
+backend/node_modules/
+backend/.env
+backend/.env.local
+backend/dist/
+backend/build/
+
+# Frontend
+frontend/node_modules/
+frontend/.env
+frontend/.env.local
+frontend/build/
+frontend/.git/
+
+# AI Service
+ai-service/venv/
+ai-service/__pycache__/
+ai-service/.env
+ai-service/*.pyc
+ai-service/.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Uploads
+backend/uploads/
