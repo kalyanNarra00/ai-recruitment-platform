@@ -24,13 +24,9 @@ def analyze_resume():
         if not resume_path or not job_description:
             return jsonify({'error': 'Missing required fields'}), 400
 
-        # Extract text from resume
         resume_text = resume_parser.extract_text(resume_path)
-
-        # Extract skills from resume
         extracted_skills = resume_parser.extract_skills(resume_text)
 
-        # Calculate match score
         match_score = match_engine.calculate_match_score(
             extracted_skills,
             required_skills,
@@ -41,7 +37,7 @@ def analyze_resume():
         return jsonify({
             'matchScore': int(match_score),
             'extractedSkills': extracted_skills,
-            'resumeText': resume_text[:500],  # First 500 chars for reference
+            'resumeText': resume_text,
         }), 200
 
     except Exception as e:

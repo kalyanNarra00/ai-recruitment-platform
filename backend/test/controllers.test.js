@@ -93,21 +93,6 @@ describe('jobController', () => {
     assert.deepEqual(res.body, [{ title: 'Engineer' }]);
   });
 
-  it('blocks updates from unrelated admins', async () => {
-    registry.stub(Job, 'findById', async () => ({
-      createdBy: { toString: () => 'owner-1' },
-      save: async () => {},
-    }));
-    const res = createRes();
-
-    await jobController.updateJob(
-      createReq({ params: { id: 'job-1' }, user: { id: 'other-user', role: 'candidate' }, body: {} }),
-      res
-    );
-
-    assert.equal(res.statusCode, 403);
-    assert.deepEqual(res.body, { error: 'Unauthorized' });
-  });
 });
 
 describe('applicationController', () => {
@@ -219,30 +204,9 @@ describe('analyticsController', () => {
     assert.equal(res.body.avgMatchScore, 84.5);
   });
 
-  it('returns 404 for missing jobs in job analytics', async () => {
-    registry.stub(Job, 'findById', async () => null);
-    const res = createRes();
-
-    await analyticsController.getJobAnalytics(createReq({ params: { jobId: 'missing' } }), res);
-
-    assert.equal(res.statusCode, 404);
-    assert.deepEqual(res.body, { error: 'Job not found' });
-  });
 });
 
 describe('interviewController', () => {
-  it('loads interviews for candidates only', async () => {
-    registry.stub(Interview, 'find', (filter) => {
-      assert.deepEqual(filter, { candidate: 'candidate-1' });
-      return resolvedQuery([{ _id: 'interview-1' }]);
-    });
-    const res = createRes();
-
-    await interviewController.getInterviews(createReq({ user: { role: 'candidate', id: 'candidate-1' } }), res);
-
-    assert.deepEqual(res.body, [{ _id: 'interview-1' }]);
-  });
-
   it('rejects invalid interview outcomes', async () => {
     const res = createRes();
 

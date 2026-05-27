@@ -43,53 +43,17 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
-exports.getJobAnalytics = async (req, res) => {
-  try {
-    const { jobId } = req.params;
-
-    const job = await Job.findById(jobId);
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-
-    const [applications, interviewsScheduled, interviewsCompleted] = await Promise.all([
-      Application.find({ jobId }),
-      Interview.countDocuments({ job: jobId, status: 'scheduled' }),
-      Interview.countDocuments({ job: jobId, status: 'completed' }),
-    ]);
-
-    const shortlisted = applications.filter((application) => application.screeningDecision === 'shortlisted').length;
-    const rejected = applications.filter((application) => application.status === 'rejected').length;
-    const selected = applications.filter((application) => ['hr_managerial_round', 'selected'].includes(application.status)).length;
-    const matchScores = applications.map((application) => application.matchScore);
-    const avgScore = matchScores.length > 0
-      ? (matchScores.reduce((total, score) => total + score, 0) / matchScores.length).toFixed(2)
-      : '0.00';
-
-    res.json({
-      jobId,
-      jobTitle: job.title,
-      totalApplications: applications.length,
-      shortlisted,
-      rejected,
-      selected,
-      interviewsScheduled,
-      interviewsCompleted,
-      avgMatchScore: avgScore,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
 exports.getCandidateFunnel = async (req, res) => {
   try {
-    const [applied, shortlisted, interviewsScheduled, interviewsCompleted, hrRound, rejected] = await Promise.all([
+    const statusOrder = ['interview_scheduled', 'interview_completed', 'hr_managerial_round', 'selected'];
+
+    const [applied, shortlisted, interviewsScheduled, interviewsCompleted, hrRound, selected, rejected] = await Promise.all([
       Application.countDocuments(),
       Application.countDocuments({ screeningDecision: 'shortlisted' }),
-      Application.countDocuments({ status: 'interview_scheduled' }),
-      Application.countDocuments({ status: 'interview_completed' }),
-      Application.countDocuments({ status: 'hr_managerial_round' }),
+      Application.countDocuments({ status: { $in: statusOrder } }),
+      Application.countDocuments({ status: { $in: statusOrder.slice(1) } }),
+      Application.countDocuments({ status: { $in: statusOrder.slice(2) } }),
+      Application.countDocuments({ status: 'selected' }),
       Application.countDocuments({ status: 'rejected' }),
     ]);
 
@@ -99,6 +63,7 @@ exports.getCandidateFunnel = async (req, res) => {
       interviewsScheduled,
       interviewsCompleted,
       hrRound,
+      selected,
       rejected,
     });
   } catch (error) {

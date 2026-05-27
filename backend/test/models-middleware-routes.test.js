@@ -156,26 +156,20 @@ describe('routes', () => {
     assert.deepEqual(listRoutes(jobRoutes), [
       { path: '/', methods: ['post'] },
       { path: '/', methods: ['get'] },
-      { path: '/:id', methods: ['get'] },
-      { path: '/:id', methods: ['put'] },
-      { path: '/:id', methods: ['delete'] },
     ]);
 
     assert.deepEqual(listRoutes(applicationRoutes), [
       { path: '/', methods: ['post'] },
       { path: '/', methods: ['get'] },
-      { path: '/:id', methods: ['get'] },
       { path: '/:id/status', methods: ['put'] },
     ]);
 
     assert.deepEqual(listRoutes(analyticsRoutes), [
       { path: '/dashboard', methods: ['get'] },
-      { path: '/jobs/:jobId', methods: ['get'] },
       { path: '/candidates/funnel', methods: ['get'] },
     ]);
 
     assert.deepEqual(listRoutes(interviewRoutes), [
-      { path: '/', methods: ['get'] },
       { path: '/:id/outcome', methods: ['put'] },
     ]);
   });

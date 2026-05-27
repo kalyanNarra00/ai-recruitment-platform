@@ -11,7 +11,7 @@ const applicationSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
-  resumeUrl: String,
+  resumeText: String,
   matchScore: {
     type: Number,
     min: 0,

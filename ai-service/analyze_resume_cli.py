@@ -31,7 +31,7 @@ def main():
             {
                 "matchScore": int(match_score),
                 "extractedSkills": extracted_skills,
-                "resumeText": resume_text[:500],
+                "resumeText": resume_text,
             }
         )
     )

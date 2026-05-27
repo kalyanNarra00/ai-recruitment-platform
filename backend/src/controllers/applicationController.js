@@ -1,3 +1,4 @@
+const fs = require('fs');
 const Application = require('../models/Application');
 const Interview = require('../models/Interview');
 const User = require('../models/User');
@@ -62,18 +63,22 @@ exports.submitApplication = async (req, res) => {
       requiredSkills: job.requiredSkills,
     });
 
-    const { matchScore, extractedSkills } = aiResponse;
+    const { matchScore, extractedSkills, resumeText } = aiResponse;
     const shortlistThreshold = job.shortlistThreshold ?? 75;
     const isShortlisted = matchScore >= shortlistThreshold;
 
     const application = await Application.create({
       jobId,
       candidateId: req.user.id,
-      resumeUrl: resumePath,
+      resumeText,
       matchScore,
       extractedSkills,
       screeningDecision: isShortlisted ? 'shortlisted' : 'rejected',
       status: isShortlisted ? 'applied' : 'rejected',
+    });
+
+    fs.unlink(resumePath, (err) => {
+      if (err) console.warn('Failed to delete resume file:', err.message);
     });
 
     try {
@@ -140,28 +145,6 @@ exports.getApplications = async (req, res) => {
     const applicationsWithInterviews = await attachInterviews(applications);
 
     res.json(applicationsWithInterviews);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-exports.getApplicationById = async (req, res) => {
-  try {
-    const application = await Application.findById(req.params.id)
-      .populate('jobId')
-      .populate('candidateId', 'firstName lastName email');
-
-    if (!application) {
-      return res.status(404).json({ error: 'Application not found' });
-    }
-
-    if (req.user.role === 'candidate' && application.candidateId._id.toString() !== req.user.id) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
-    const [applicationWithInterview] = await attachInterviews([application]);
-
-    res.json(applicationWithInterview);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

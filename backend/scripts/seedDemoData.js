@@ -115,7 +115,7 @@ async function seed() {
   const app1 = await Application.create({
     jobId: job1._id,
     candidateId: candidate1._id,
-    resumeUrl: '/uploads/rahul_resume.pdf',
+    resumeText: 'Rahul Sharma - Full Stack Developer. Skills: JavaScript, React, Node.js, MongoDB, Git, REST APIs, Python, SQL.',
     matchScore: 85,
     extractedSkills: ['JavaScript', 'React', 'Node.js', 'MongoDB', 'Git'],
     screeningDecision: 'shortlisted',
@@ -127,7 +127,7 @@ async function seed() {
   const app2 = await Application.create({
     jobId: job2._id,
     candidateId: candidate1._id,
-    resumeUrl: '/uploads/rahul_resume.pdf',
+    resumeText: 'Rahul Sharma - Full Stack Developer. Skills: JavaScript, React, Node.js, MongoDB, Git, REST APIs, Python, SQL.',
     matchScore: 45,
     extractedSkills: ['Python', 'SQL'],
     screeningDecision: 'rejected',
@@ -139,7 +139,7 @@ async function seed() {
   const app3 = await Application.create({
     jobId: job1._id,
     candidateId: candidate2._id,
-    resumeUrl: '/uploads/anita_resume.pdf',
+    resumeText: 'Anita Desai - DevOps Engineer. Skills: JavaScript, React, REST APIs, Git, Docker, Linux, CI/CD, Kubernetes, AWS.',
     matchScore: 78,
     extractedSkills: ['JavaScript', 'React', 'REST APIs', 'Git'],
     screeningDecision: 'shortlisted',
@@ -151,7 +151,7 @@ async function seed() {
   const app4 = await Application.create({
     jobId: job3._id,
     candidateId: candidate2._id,
-    resumeUrl: '/uploads/anita_resume.pdf',
+    resumeText: 'Anita Desai - DevOps Engineer. Skills: JavaScript, React, REST APIs, Git, Docker, Linux, CI/CD, Kubernetes, AWS.',
     matchScore: 60,
     extractedSkills: ['Docker', 'Linux', 'CI/CD'],
     screeningDecision: 'pending',

@@ -6,7 +6,6 @@ const { authMiddleware, authorize } = require('../middleware/auth');
 const {
   submitApplication,
   getApplications,
-  getApplicationById,
   updateApplicationStatus,
 } = require('../controllers/applicationController');
 
@@ -34,7 +33,6 @@ const upload = multer({ storage });
 
 router.post('/', authMiddleware, upload.single('resume'), submitApplication);
 router.get('/', authMiddleware, getApplications);
-router.get('/:id', authMiddleware, getApplicationById);
 router.put('/:id/status', authMiddleware, authorize('admin'), updateApplicationStatus);
 
 module.exports = router;

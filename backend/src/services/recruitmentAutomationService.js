@@ -56,7 +56,7 @@ Candidate Email: ${candidate.email}
 Job: ${job.title}
 Match Score: ${matchScore}%
 Extracted Skills: ${extractedSkills.join(', ') || 'No skills extracted'}
-Resume Path: ${application.resumeUrl}
+Resume: [extracted text stored in database]
 
 The candidate has successfully applied and is now in the automated screening pipeline.
   `.trim();
