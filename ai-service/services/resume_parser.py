@@ -57,7 +57,8 @@ class ResumeParser:
         found_skills = []
 
         for skill in self.common_skills:
-            if skill in text_lower:
+            pattern = rf'(?<!\w){re.escape(skill.lower())}(?!\w)'
+            if re.search(pattern, text_lower):
                 found_skills.append(skill)
 
         return list(set(found_skills))

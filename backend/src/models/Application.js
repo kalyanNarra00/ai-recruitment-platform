@@ -18,14 +18,30 @@ const applicationSchema = new mongoose.Schema({
     max: 100,
   },
   extractedSkills: [String],
+  screeningDecision: {
+    type: String,
+    enum: ['pending', 'shortlisted', 'rejected'],
+    default: 'pending',
+  },
   status: {
     type: String,
-    enum: ['received', 'shortlisted', 'rejected'],
-    default: 'received',
+    enum: [
+      'applied',
+      'interview_scheduled',
+      'interview_completed',
+      'hr_managerial_round',
+      'selected',
+      'rejected',
+    ],
+    default: 'applied',
   },
   emailSent: {
     type: Boolean,
     default: false,
+  },
+  lastEmailType: {
+    type: String,
+    default: 'none',
   },
   createdAt: {
     type: Date,

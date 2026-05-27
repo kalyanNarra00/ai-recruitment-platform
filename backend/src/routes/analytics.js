@@ -8,8 +8,8 @@ const {
 
 const router = express.Router();
 
-router.get('/dashboard', authMiddleware, authorize('hr_manager', 'recruiter', 'admin'), getDashboardStats);
-router.get('/jobs/:jobId', authMiddleware, authorize('hr_manager', 'recruiter', 'admin'), getJobAnalytics);
-router.get('/candidates/funnel', authMiddleware, authorize('hr_manager', 'recruiter', 'admin'), getCandidateFunnel);
+router.get('/dashboard', authMiddleware, authorize('admin'), getDashboardStats);
+router.get('/jobs/:jobId', authMiddleware, authorize('admin'), getJobAnalytics);
+router.get('/candidates/funnel', authMiddleware, authorize('admin'), getCandidateFunnel);
 
 module.exports = router;

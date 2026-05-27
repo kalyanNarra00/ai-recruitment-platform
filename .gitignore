@@ -1,23 +1,26 @@
+# Environment files
+*.env
+
 # Backend
 backend/node_modules/
-backend/.env
 backend/.env.local
 backend/dist/
 backend/build/
 
 # Frontend
 frontend/node_modules/
-frontend/.env
 frontend/.env.local
 frontend/build/
 frontend/.git/
 
 # AI Service
 ai-service/venv/
-ai-service/__pycache__/
-ai-service/.env
-ai-service/*.pyc
+ai-service/.venv/
+**/__pycache__/
+**/*.pyc
 ai-service/.pytest_cache/
+ai-service/uploads/
+ai-service/logs/
 
 # IDE
 .vscode/

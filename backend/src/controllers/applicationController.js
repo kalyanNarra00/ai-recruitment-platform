@@ -1,13 +1,37 @@
-const fs = require('fs');
-const axios = require('axios');
 const Application = require('../models/Application');
-const Email = require('../models/Email');
+const Interview = require('../models/Interview');
 const User = require('../models/User');
 const Job = require('../models/Job');
-const { sendEmail } = require('../services/emailService');
+const { analyzeResume } = require('../services/resumeAnalysisService');
+const {
+  sendApplicationAcknowledgement,
+  notifyHrOnApplication,
+  scheduleInterviewForShortlistedCandidate,
+  sendRejectionEmail,
+  sendHrRoundRejectionEmail,
+  sendSelectionEmail,
+} = require('../services/recruitmentAutomationService');
+
+const attachInterviews = async (applications) => {
+  const applicationIds = applications.map((application) => application._id);
+  const interviews = await Interview.find({ applicationId: { $in: applicationIds } });
+  const interviewMap = new Map(
+    interviews.map((interview) => [interview.applicationId.toString(), interview.toObject()])
+  );
+
+  return applications.map((application) => {
+    const applicationObject = application.toObject();
+    applicationObject.interview = interviewMap.get(application._id.toString()) || null;
+    return applicationObject;
+  });
+};
 
 exports.submitApplication = async (req, res) => {
   try {
+    if (req.user.role !== 'candidate') {
+      return res.status(403).json({ error: 'Only candidates can submit applications' });
+    }
+
     const { jobId } = req.body;
     const file = req.file;
 
@@ -20,112 +44,102 @@ exports.submitApplication = async (req, res) => {
       return res.status(404).json({ error: 'Job not found' });
     }
 
+    const existingApplication = await Application.findOne({
+      jobId,
+      candidateId: req.user.id,
+    });
+
+    if (existingApplication) {
+      return res.status(400).json({ error: 'You have already applied for this job' });
+    }
+
     const candidate = await User.findById(req.user.id);
     const resumePath = file.path;
 
-    try {
-      const aiResponse = await axios.post(`${process.env.AI_SERVICE_URL}/api/analyze-resume`, {
-        resumePath,
-        jobDescription: job.description,
-        requiredSkills: job.requiredSkills,
-      });
-
-      const { matchScore, extractedSkills } = aiResponse.data;
-
-      const application = new Application({
-        jobId,
-        candidateId: req.user.id,
-        resumeUrl: resumePath,
-        matchScore,
-        extractedSkills,
-        status: matchScore > 75 ? 'shortlisted' : 'rejected',
-      });
-
-      await application.save();
-
-      await triggerAutomaticEmail(application, job, candidate, matchScore);
-
-      res.status(201).json({
-        application: application.toObject(),
-        matchScore,
-        decision: matchScore > 75 ? 'shortlisted' : 'rejected',
-      });
-    } catch (aiError) {
-      console.error('AI Service error:', aiError.message);
-      res.status(500).json({ error: 'Resume analysis failed' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-const triggerAutomaticEmail = async (application, job, candidate, matchScore) => {
-  try {
-    const emailTemplate = matchScore > 75 ? 'shortlist' : 'rejection';
-    const subject = matchScore > 75
-      ? `Congratulations! You're shortlisted for ${job.title}`
-      : `Application Status: ${job.title}`;
-
-    const body = matchScore > 75
-      ? `
-Dear ${candidate.firstName},
-
-Thank you for applying for the ${job.title} position.
-
-After reviewing your resume against the job requirements, we are pleased to inform you that you have been shortlisted for the next round of the recruitment process.
-
-Our recruitment team will contact you shortly with further details.
-
-Best regards,
-HR Team
-      `
-      : `
-Dear ${candidate.firstName},
-
-Thank you for applying for the ${job.title} position.
-
-After reviewing your profile, we regret to inform you that your application was not shortlisted for the next stage at this time.
-
-We appreciate your interest in our company and encourage you to apply for future opportunities that match your skills and experience.
-
-Best regards,
-HR Team
-      `;
-
-    await sendEmail(candidate.email, subject, body);
-
-    const emailRecord = new Email({
-      applicationId: application._id,
-      recipientEmail: candidate.email,
-      subject,
-      body,
-      type: emailTemplate,
+    const aiResponse = await analyzeResume({
+      resumePath,
+      jobDescription: job.description,
+      requiredSkills: job.requiredSkills,
     });
 
-    await emailRecord.save();
+    const { matchScore, extractedSkills } = aiResponse;
+    const shortlistThreshold = job.shortlistThreshold ?? 75;
+    const isShortlisted = matchScore >= shortlistThreshold;
 
-    application.emailSent = true;
-    await application.save();
+    const application = await Application.create({
+      jobId,
+      candidateId: req.user.id,
+      resumeUrl: resumePath,
+      matchScore,
+      extractedSkills,
+      screeningDecision: isShortlisted ? 'shortlisted' : 'rejected',
+      status: isShortlisted ? 'applied' : 'rejected',
+    });
+
+    try {
+      await sendApplicationAcknowledgement({ application, job, candidate });
+    } catch (emailErr) {
+      console.warn('Acknowledgement email failed (non-blocking):', emailErr.message);
+    }
+
+    try {
+      await notifyHrOnApplication({
+        application,
+        job,
+        candidate,
+        matchScore,
+        extractedSkills,
+      });
+    } catch (emailErr) {
+      console.warn('HR notification email failed (non-blocking):', emailErr.message);
+    }
+
+    let interview = null;
+    if (isShortlisted) {
+      interview = await scheduleInterviewForShortlistedCandidate({
+        application,
+        job,
+        candidate,
+      });
+    } else {
+      await sendRejectionEmail({
+        application,
+        job,
+        candidate,
+      });
+    }
+
+    const savedApplication = await Application.findById(application._id)
+      .populate('jobId', 'title')
+      .populate('candidateId', 'firstName lastName email');
+
+    res.status(201).json({
+      application: {
+        ...savedApplication.toObject(),
+        interview: interview ? interview.toObject() : null,
+      },
+      matchScore,
+      shortlistThreshold,
+      decision: isShortlisted ? 'shortlisted' : 'rejected',
+    });
   } catch (error) {
-    console.error('Email sending error:', error.message);
+    console.error('Application submission error:', error.message);
+    res.status(500).json({ error: error.message || 'Resume analysis failed' });
   }
 };
 
 exports.getApplications = async (req, res) => {
   try {
-    let filter = {};
-
-    if (req.user.role === 'candidate') {
-      filter.candidateId = req.user.id;
-    } else if (req.user.role === 'recruiter') {
-      // Recruiters see all applications
-    }
+    const filter = req.user.role === 'candidate' ? { candidateId: req.user.id } : {};
 
     const applications = await Application.find(filter)
-      .populate('jobId', 'title')
+      .sort({ createdAt: -1 })
+      .populate('jobId', 'title location interviewerName interviewerEmail hrEmail')
       .populate('candidateId', 'firstName lastName email');
 
-    res.json(applications);
+    const applicationsWithInterviews = await attachInterviews(applications);
+
+    res.json(applicationsWithInterviews);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -145,7 +159,9 @@ exports.getApplicationById = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    res.json(application);
+    const [applicationWithInterview] = await attachInterviews([application]);
+
+    res.json(applicationWithInterview);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -154,22 +170,47 @@ exports.getApplicationById = async (req, res) => {
 exports.updateApplicationStatus = async (req, res) => {
   try {
     const { status } = req.body;
+    const validStatuses = [
+      'applied',
+      'interview_scheduled',
+      'interview_completed',
+      'hr_managerial_round',
+      'selected',
+      'rejected',
+    ];
 
-    if (!['received', 'shortlisted', 'rejected'].includes(status)) {
+    if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    const application = await Application.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    const application = await Application.findById(req.params.id)
+      .populate('jobId')
+      .populate('candidateId', 'firstName lastName email');
 
     if (!application) {
       return res.status(404).json({ error: 'Application not found' });
     }
 
-    res.json(application);
+    if (status === 'selected') {
+      await sendSelectionEmail({
+        application,
+        job: application.jobId,
+        candidate: application.candidateId,
+      });
+    } else if (status === 'rejected' && application.status === 'hr_managerial_round') {
+      await sendHrRoundRejectionEmail({
+        application,
+        job: application.jobId,
+        candidate: application.candidateId,
+      });
+    } else {
+      application.status = status;
+      await application.save();
+    }
+
+    const [applicationWithInterview] = await attachInterviews([application]);
+
+    res.json(applicationWithInterview);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

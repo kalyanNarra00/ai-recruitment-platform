@@ -6,31 +6,24 @@ const transporter = nodemailer.createTransport({
     user: process.env.NODEMAILER_EMAIL,
     pass: process.env.NODEMAILER_PASSWORD,
   },
-  debug: true,
 });
 
 const sendEmail = async (to, subject, body) => {
+  const mailOptions = {
+    from: process.env.NODEMAILER_EMAIL,
+    to,
+    subject,
+    text: body,
+  };
+
+  console.log(`[EMAIL] Sending to: ${to} | Subject: ${subject}`);
+
   try {
-    const mailOptions = {
-      from: process.env.NODEMAILER_EMAIL,
-      to,
-      subject,
-      text: body,
-    };
-
-    // In test mode, log to console instead of actually sending
-    console.log('\n[EMAIL LOG]');
-    console.log('To:', to);
-    console.log('Subject:', subject);
-    console.log('Body:', body);
-    console.log('[END EMAIL LOG]\n');
-
-    // Uncomment below when ready to send real emails
-    // return await transporter.sendMail(mailOptions);
-
-    return { messageId: 'test-mode' };
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`[EMAIL] Sent successfully. MessageId: ${result.messageId}`);
+    return result;
   } catch (error) {
-    console.error('Email error:', error.message);
+    console.error(`[EMAIL] Failed to send to ${to}:`, error.message);
     throw error;
   }
 };

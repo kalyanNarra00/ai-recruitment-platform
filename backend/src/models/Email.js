@@ -14,7 +14,14 @@ const emailSchema = new mongoose.Schema({
   body: String,
   type: {
     type: String,
-    enum: ['shortlist', 'rejection'],
+    enum: [
+      'application_acknowledgement',
+      'application_received',
+      'interview_scheduled',
+      'hr_round',
+      'rejection',
+      'selection',
+    ],
     required: true,
   },
   sentAt: {

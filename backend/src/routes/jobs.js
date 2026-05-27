@@ -10,10 +10,10 @@ const {
 
 const router = express.Router();
 
-router.post('/', authMiddleware, authorize('hr_manager', 'admin'), createJob);
+router.post('/', authMiddleware, authorize('admin'), createJob);
 router.get('/', getJobs);
 router.get('/:id', getJobById);
-router.put('/:id', authMiddleware, authorize('hr_manager', 'admin'), updateJob);
-router.delete('/:id', authMiddleware, authorize('hr_manager', 'admin'), deleteJob);
+router.put('/:id', authMiddleware, authorize('admin'), updateJob);
+router.delete('/:id', authMiddleware, authorize('admin'), deleteJob);
 
 module.exports = router;

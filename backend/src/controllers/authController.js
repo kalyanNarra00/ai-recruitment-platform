@@ -1,9 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const normalizeRole = (role) => (role === 'candidate' ? 'candidate' : 'admin');
+
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user._id, email: user.email, role: user.role },
+    { id: user._id, email: user.email, role: normalizeRole(user.role) },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE || '7d' }
   );
@@ -12,6 +14,7 @@ const generateToken = (user) => {
 exports.signup = async (req, res) => {
   try {
     const { email, password, firstName, lastName, role, company } = req.body;
+    const normalizedRole = normalizeRole(role);
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -23,7 +26,7 @@ exports.signup = async (req, res) => {
       passwordHash: password,
       firstName,
       lastName,
-      role: role || 'candidate',
+      role: normalizedRole,
       company,
     });
 
@@ -37,10 +40,11 @@ exports.signup = async (req, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role,
+        role: normalizedRole,
       },
     });
   } catch (error) {
+    console.error('AUTH SIGNUP ERROR', error.stack);
     res.status(500).json({ error: error.message });
   }
 };
@@ -67,7 +71,7 @@ exports.login = async (req, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role,
+        role: normalizeRole(user.role),
       },
     });
   } catch (error) {
